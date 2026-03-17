@@ -1,0 +1,20 @@
+{
+  "sample": "analysis",
+  "total_reads": 50,
+  "aligned_reads": 50,
+  "unmodified_reads": 20,
+  "modified_reads": 30,
+  "nhej_reads": 30,
+  "hdr_reads": 0,
+  "ambiguous_reads": 0,
+  "low_confidence_reads": 0,
+  "editing_efficiency_pct": 60.0,
+  "read_preservation_pct": 100.0,
+  "mean_insertion_size": 4.0,
+  "mean_deletion_size": 3.0,
+  "indel_spectrum": {
+    "-3": 16,
+    "4": 14
+  },
+  "base_conversion_counts": {}
+}

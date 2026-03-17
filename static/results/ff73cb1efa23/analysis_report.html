@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CRISPR Analysis — analysis</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; margin: 2rem; background: #fafafa; color: #222; }
+  h1 { color: #1565C0; }
+  h2 { color: #333; border-bottom: 2px solid #1565C0; padding-bottom: 0.3rem; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .stat-card { background: white; border-radius: 8px; padding: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+  .stat-card .value { font-size: 2rem; font-weight: bold; color: #1565C0; }
+  .stat-card .label { font-size: 0.9rem; color: #666; margin-top: 0.3rem; }
+  .highlight { background: #E3F2FD; padding: 0.8rem; border-radius: 6px; margin: 1rem 0; font-weight: bold; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  th { background: #1565C0; color: white; padding: 0.7rem; text-align: left; }
+  td { padding: 0.5rem 0.7rem; border-bottom: 1px solid #eee; }
+  tr:hover { background: #f5f5f5; }
+  img { max-width: 100%; border-radius: 8px; margin: 0.5rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .plots { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1rem; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+  .badge-nhej { background: #FFCDD2; color: #B71C1C; }
+  .badge-hdr { background: #BBDEFB; color: #0D47A1; }
+  .badge-unmod { background: #C8E6C9; color: #1B5E20; }
+  .badge-lc { background: #E0E0E0; color: #424242; }
+  .badge-amb { background: #FFE0B2; color: #E65100; }
+</style>
+</head>
+<body>
+<h1>CRISPR NGS Analysis Report</h1>
+<p><strong>Sample:</strong> analysis &nbsp;|&nbsp;
+   <strong>Reference length:</strong> 257 bp &nbsp;|&nbsp;
+   <strong>Cut site:</strong> 117</p>
+
+<div class="highlight">
+  100% Read Preservation — All 50 reads analyzed (0 discarded)
+</div>
+
+<h2>Summary Statistics</h2>
+<div class="stat-grid">
+  <div class="stat-card"><div class="value">50</div><div class="label">Total Reads</div></div>
+  <div class="stat-card"><div class="value">60.0%</div><div class="label">Editing Efficiency</div></div>
+  <div class="stat-card"><div class="value">20</div><div class="label">Unmodified</div></div>
+  <div class="stat-card"><div class="value">30</div><div class="label">NHEJ</div></div>
+  <div class="stat-card"><div class="value">0</div><div class="label">HDR</div></div>
+  <div class="stat-card"><div class="value">0</div><div class="label">Low Confidence</div></div>
+</div>
+
+<h2>Visualizations</h2>
+<div class="plots">
+  <div><img src="plots/classification_pie.png" alt="Classification"></div>
+  <div><img src="plots/indel_spectrum.png" alt="Indel Spectrum"></div>
+  <div><img src="plots/edit_positions.png" alt="Edit Positions"></div>
+  <div><img src="plots/indel_sizes.png" alt="Indel Sizes"></div>
+</div>
+
+<h2>Per-Read Results (first 200)</h2>
+<table>
+<tr><th>Read</th><th>Classification</th><th>Identity</th><th>Ins</th><th>Del</th><th>Sub</th><th>Method</th></tr>
+<tr><td>read_0</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_1</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_2</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_3</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_4</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_5</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_6</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_7</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_8</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_9</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_10</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_11</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_12</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_13</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_14</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_15</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_16</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_17</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_18</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_19</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_20</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_21</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_22</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_23</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_24</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_25</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_26</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_27</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_28</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_29</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_30</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_31</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_32</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_33</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_34</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_35</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_36</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_37</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_38</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_39</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>98.47%</td><td>4</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_40</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_41</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_42</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_43</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_44</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_45</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_46</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+<tr><td>read_47</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_48</td><td><span class='badge badge-unmod'>unmodified</span></td><td>100.00%</td><td>0</td><td>0</td><td>0</td><td>global</td></tr>
+<tr><td>read_49</td><td><span class='badge badge-nhej'>NHEJ</span></td><td>100.00%</td><td>0</td><td>3</td><td>0</td><td>global</td></tr>
+</table>
+
+<h2>Methodology</h2>
+<ul>
+  <li><strong>Alignment:</strong> Multi-strategy (global + local + semi-global), best score selected</li>
+  <li><strong>Read preservation:</strong> 100% — low-confidence reads flagged, never discarded</li>
+  <li><strong>Edit detection:</strong> CIGAR-based with complex indel merging</li>
+</ul>
+
+<footer style="margin-top:2rem; color:#999; font-size:0.8rem;">
+  Generated by Advanced CRISPR NGS Analyzer v0.1.0
+</footer>
+</body>
+</html>
