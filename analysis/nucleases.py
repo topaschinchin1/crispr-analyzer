@@ -42,6 +42,12 @@ class NucleaseProfile:
 # ---------------------------------------------------------------------------
 
 NUCLEASE_LIBRARY: dict[str, dict[str, NucleaseProfile]] = {
+    'Agnostic': {
+        'Agnostic': NucleaseProfile(
+            name='Agnostic', family='Agnostic', pam='N',
+            cut_offset=0, pam_side='3prime',
+        ),
+    },
     'Cas9': {
         'SpCas9': NucleaseProfile(
             name='SpCas9', family='Cas9', pam='NGG',
@@ -163,6 +169,20 @@ class NucleaseEngine:
         """
         guide_dna = guide_seq.upper().replace('U', 'T')
         ref_upper = reference.upper()
+
+        # Agnostic mode: just find the sgRNA and set cut at mid-point
+        if profile.family == 'Agnostic':
+            for strand, seq in [('fwd', ref_upper), ('rev', _revcomp(ref_upper))]:
+                idx = seq.find(guide_dna)
+                if idx == -1:
+                    continue
+                # Cut site at 3' end of guide (most common across nucleases)
+                cut_pos = idx + len(guide_dna)
+                if strand == 'rev':
+                    cut_pos = len(reference) - cut_pos
+                if 0 <= cut_pos <= len(reference):
+                    return cut_pos
+            return None
 
         # Search both strands
         for strand, seq in [('fwd', ref_upper), ('rev', _revcomp(ref_upper))]:

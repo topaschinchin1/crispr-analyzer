@@ -533,6 +533,7 @@
                         <div class="form-group">
                             <label class="form-label">Nuclease System</label>
                             <select class="form-select" id="nuclease">
+                                <option value="Agnostic">Nuclease-Agnostic (any system)</option>
                                 <option value="Cas9">Cas9 Systems</option>
                                 <option value="Cas12a">Cas12a / Cpf1</option>
                                 <option value="Cas12f">Cas12f (miniature)</option>
@@ -571,7 +572,7 @@
                     </div>
 
                     <div class="nuclease-info" id="nucleaseInfo">
-                        SpCas9: NGG PAM, cuts 3bp upstream of PAM
+                        Nuclease-agnostic: detects all changes near sgRNA, no PAM required
                     </div>
 
                     <button type="submit" class="analyze-btn" id="analyzeBtn">
@@ -635,8 +636,8 @@
                 <div class="advantage-item">
                     <div class="advantage-icon">&#129516;</div>
                     <div class="advantage-text">
-                        <strong>15+ Nuclease Systems</strong><br>
-                        Cas9, Cas12a, Cas12f, Base Editors, Prime Editors, and custom nucleases
+                        <strong>Nuclease-Agnostic + 15 Systems</strong><br>
+                        Works with any nuclease — or choose Cas9, Cas12a, Cas12f, Base/Prime Editors
                     </div>
                 </div>
 
@@ -705,6 +706,9 @@
     <script>
         // Nuclease configurations
         const nucleaseConfigs = {
+            Agnostic: {
+                Agnostic: { description: 'Nuclease-agnostic: detects all changes near sgRNA, no PAM required' },
+            },
             Cas9: {
                 SpCas9:    { description: 'SpCas9: NGG PAM, cuts 3bp upstream of PAM' },
                 SaCas9:    { description: 'SaCas9: NNGRRT PAM, cuts 3bp upstream of PAM' },
@@ -771,6 +775,12 @@
         function updateVariants() {
             const fam = nucleaseSelect.value;
             const variants = Object.keys(nucleaseConfigs[fam] || {});
+            const variantGroup = variantSelect.closest('.form-group');
+            if (fam === 'Agnostic') {
+                variantGroup.style.display = 'none';
+            } else {
+                variantGroup.style.display = '';
+            }
             variantSelect.innerHTML = '';
             variants.forEach(v => {
                 const o = document.createElement('option');
