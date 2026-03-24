@@ -33,12 +33,13 @@ class ReportGenerator:
 
     def generate_all(self, results: list[ReadAnalysis],
                      summary: SampleSummary, reference: str,
-                     cut_site: int | None = None) -> None:
+                     cut_site: int | None = None,
+                     guide_rna: str | None = None) -> None:
         """Generate all report formats."""
         self._write_csv(results)
         self._write_json(summary)
         self._generate_plots(summary, reference, cut_site)
-        self._write_html(results, summary, reference, cut_site)
+        self._write_html(results, summary, reference, cut_site, guide_rna)
         logger.info("Reports written to %s", self.output_dir)
 
     # ------------------------------------------------------------------
@@ -237,12 +238,238 @@ class ReportGenerator:
         plt.close(fig)
 
     # ------------------------------------------------------------------
+    # Allele frequency table
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _edit_signature(ra: ReadAnalysis) -> str:
+        """Create a hashable signature from a read's edits."""
+        if not ra.edits:
+            return 'UNMODIFIED'
+        parts = []
+        for e in ra.edits:
+            parts.append(f"{e.edit_type}:{e.ref_start}-{e.ref_end}:{e.ref_bases}>{e.alt_bases}")
+        return '|'.join(parts)
+
+    def _build_allele_table(self, results: list[ReadAnalysis],
+                            reference: str, guide_rna: str | None,
+                            cut_site: int | None,
+                            max_alleles: int = 30) -> str:
+        """Build CRISPResso2-style allele frequency table as HTML."""
+        from collections import Counter, defaultdict
+
+        # Group reads by edit signature
+        sig_groups: dict[str, list[ReadAnalysis]] = defaultdict(list)
+        for ra in results:
+            sig = self._edit_signature(ra)
+            sig_groups[sig].append(ra)
+
+        # Sort by frequency (descending)
+        sorted_alleles = sorted(sig_groups.items(),
+                                key=lambda x: len(x[1]), reverse=True)
+
+        total_reads = len(results)
+        if total_reads == 0:
+            return ''
+
+        # Determine the display window around the guide/cut site
+        # If guide is found in reference, show ±15bp around it
+        # Otherwise show the full reference (for short amplicons)
+        ref_upper = reference.upper()
+        guide_start = -1
+        if guide_rna:
+            guide_upper = guide_rna.upper().replace('U', 'T')
+            guide_start = ref_upper.find(guide_upper)
+            if guide_start < 0:
+                # Try reverse complement
+                rc_table = str.maketrans('ACGT', 'TGCA')
+                rc_guide = guide_upper.translate(rc_table)[::-1]
+                guide_start = ref_upper.find(rc_guide)
+                if guide_start >= 0:
+                    guide_upper = rc_guide
+
+        if guide_start >= 0 and len(reference) > 80:
+            win_start = max(0, guide_start - 15)
+            win_end = min(len(reference), guide_start + len(guide_upper) + 15)
+        else:
+            win_start = 0
+            win_end = len(reference)
+
+        ref_window = ref_upper[win_start:win_end]
+
+        # Build HTML
+        html = []
+        html.append('<div class="allele-section">')
+        html.append(f'<h2>Allele Frequency Table</h2>')
+        html.append(f'<p>Showing top {min(max_alleles, len(sorted_alleles))} alleles '
+                     f'out of {len(sorted_alleles)} unique variants '
+                     f'({total_reads} total reads)</p>')
+
+        html.append('<div class="allele-table-wrap">')
+        html.append('<table class="allele-table">')
+
+        # --- Reference row ---
+        html.append('<tr class="ref-row">')
+        for i, base in enumerate(ref_window):
+            ref_pos = win_start + i
+            is_cut = (cut_site is not None and ref_pos == cut_site)
+            is_guide = (guide_start >= 0 and
+                        guide_start <= ref_pos < guide_start + len(guide_upper))
+            classes = ['base']
+            if is_guide:
+                classes.append('guide-base')
+            if is_cut:
+                classes.append('cut-pos')
+            html.append(f'<td class="{" ".join(classes)}">{base}</td>')
+        html.append('<td class="allele-label">Reference</td>')
+        html.append('</tr>')
+
+        # --- sgRNA row ---
+        if guide_start >= 0:
+            html.append('<tr class="sgrna-row">')
+            for i in range(len(ref_window)):
+                ref_pos = win_start + i
+                if guide_start <= ref_pos < guide_start + len(guide_upper):
+                    html.append('<td class="base sgrna-mark"></td>')
+                else:
+                    html.append('<td class="base"></td>')
+            html.append('<td class="allele-label">sgRNA</td>')
+            html.append('</tr>')
+
+        # --- Cleavage position indicator ---
+        if cut_site is not None and win_start <= cut_site < win_end:
+            html.append('<tr class="cut-row">')
+            for i in range(len(ref_window)):
+                ref_pos = win_start + i
+                if ref_pos == cut_site:
+                    html.append('<td class="base cut-indicator">&#9660;</td>')
+                else:
+                    html.append('<td class="base"></td>')
+            html.append('<td class="allele-label">Cut site</td>')
+            html.append('</tr>')
+
+        # --- Spacer ---
+        html.append(f'<tr><td colspan="{len(ref_window) + 1}" '
+                     f'style="height:6px;border:none;"></td></tr>')
+
+        # --- Allele rows ---
+        for allele_idx, (sig, reads) in enumerate(sorted_alleles[:max_alleles]):
+            count = len(reads)
+            pct = count / total_reads * 100
+
+            # Use the first read's alignment to build the display
+            rep = reads[0]
+
+            # Build the allele sequence aligned to the reference window
+            # Walk the alignment and map each ref position to the query base
+            allele_bases = self._map_allele_to_window(
+                rep, ref_upper, win_start, win_end)
+
+            html.append('<tr class="allele-row">')
+            for i, (ref_base, allele_info) in enumerate(
+                    zip(ref_window, allele_bases)):
+                abase, mtype = allele_info  # (base, type)
+                classes = ['base']
+                if mtype == 'match':
+                    classes.append('match')
+                elif mtype == 'substitution':
+                    classes.append('sub')
+                elif mtype == 'insertion':
+                    classes.append('ins')
+                elif mtype == 'deletion':
+                    classes.append('del')
+                html.append(f'<td class="{" ".join(classes)}">{abase}</td>')
+
+            # Frequency label
+            reads_word = 'read' if count == 1 else 'reads'
+            html.append(
+                f'<td class="allele-label freq">'
+                f'{pct:.2f}% ({count} {reads_word})</td>')
+            html.append('</tr>')
+
+        html.append('</table>')
+        html.append('</div>')  # allele-table-wrap
+
+        # Legend
+        html.append('''
+        <div class="allele-legend">
+            <span class="legend-item"><span class="swatch sub-swatch"></span> <b>Substitution</b></span>
+            <span class="legend-item"><span class="swatch ins-swatch"></span> Insertion</span>
+            <span class="legend-item"><span class="swatch del-swatch"></span> Deletion</span>
+            <span class="legend-item">&#9660; Predicted cleavage position</span>
+        </div>
+        ''')
+        html.append('</div>')  # allele-section
+        return '\n'.join(html)
+
+    @staticmethod
+    def _map_allele_to_window(ra: ReadAnalysis, reference: str,
+                               win_start: int, win_end: int
+                               ) -> list[tuple[str, str]]:
+        """Map a read's alignment to the reference window positions.
+
+        Returns a list of (displayed_base, mutation_type) for each
+        position in the window.
+        """
+        aligned_q = ra.aligned_query
+        aligned_r = ra.aligned_ref
+        ref_offset = ra.ref_start
+
+        # Build a map: reference_position -> (query_base, type)
+        ref_map: dict[int, tuple[str, str]] = {}
+        # Track insertions to annotate at the preceding ref position
+        pending_insertions: dict[int, str] = {}
+
+        if aligned_q and aligned_r:
+            ref_pos = ref_offset
+            for j in range(min(len(aligned_q), len(aligned_r))):
+                qb = aligned_q[j]
+                rb = aligned_r[j]
+
+                if rb == '-':
+                    # Insertion — note it at current ref_pos
+                    if ref_pos not in pending_insertions:
+                        pending_insertions[ref_pos] = ''
+                    pending_insertions[ref_pos] += qb
+                elif qb == '-':
+                    # Deletion
+                    ref_map[ref_pos] = ('-', 'deletion')
+                    ref_pos += 1
+                elif qb != rb:
+                    ref_map[ref_pos] = (qb, 'substitution')
+                    ref_pos += 1
+                else:
+                    ref_map[ref_pos] = (qb, 'match')
+                    ref_pos += 1
+
+        # Build output for the display window
+        result = []
+        for pos in range(win_start, win_end):
+            if pos in ref_map:
+                base, mtype = ref_map[pos]
+                # If there's an insertion right after this position,
+                # mark the base as having an insertion
+                if (pos + 1) in pending_insertions and mtype == 'match':
+                    mtype = 'insertion'
+                result.append((base, mtype))
+            else:
+                # Position not covered by alignment
+                ref_base = reference[pos] if pos < len(reference) else '?'
+                result.append((ref_base, 'match'))
+
+        return result
+
+    # ------------------------------------------------------------------
     # HTML report
     # ------------------------------------------------------------------
 
     def _write_html(self, results: list[ReadAnalysis],
                     summary: SampleSummary, reference: str,
-                    cut_site: int | None) -> None:
+                    cut_site: int | None,
+                    guide_rna: str | None = None) -> None:
+        allele_table_html = self._build_allele_table(
+            results, reference, guide_rna, cut_site)
+
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -269,6 +496,31 @@ class ReportGenerator:
   .badge-unmod {{ background: #C8E6C9; color: #1B5E20; }}
   .badge-lc {{ background: #E0E0E0; color: #424242; }}
   .badge-amb {{ background: #FFE0B2; color: #E65100; }}
+
+  /* Allele frequency table — CRISPResso2 style */
+  .allele-section {{ margin: 2rem 0; }}
+  .allele-table-wrap {{ overflow-x: auto; }}
+  .allele-table {{ border-collapse: collapse; width: auto; margin: 1rem 0; background: white; font-family: 'Courier New', monospace; font-size: 14px; }}
+  .allele-table td {{ padding: 0; text-align: center; border: none; }}
+  .allele-table td.base {{ width: 22px; height: 26px; min-width: 22px; line-height: 26px; }}
+  .allele-table .ref-row td {{ background: #f0f0f0; font-weight: bold; color: #333; }}
+  .allele-table .ref-row td.guide-base {{ background: #c8e6c9; }}
+  .allele-table .sgrna-row td {{ height: 6px; }}
+  .allele-table .sgrna-row td.sgrna-mark {{ background: #81c784; height: 6px; }}
+  .allele-table .cut-row td {{ height: 18px; font-size: 10px; color: #d32f2f; }}
+  .allele-table .allele-row td.match {{ background: #e8f5e9; color: #333; }}
+  .allele-table .allele-row td.sub {{ background: #fff3e0; color: #e65100; font-weight: bold; }}
+  .allele-table .allele-row td.ins {{ background: #fce4ec; color: #c62828; outline: 2px solid #ef5350; outline-offset: -2px; }}
+  .allele-table .allele-row td.del {{ background: #efebe9; color: #999; }}
+  .allele-table .allele-label {{ padding: 2px 12px !important; white-space: nowrap; font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; text-align: left !important; border-left: 2px solid #ddd; }}
+  .allele-table .allele-label.freq {{ color: #555; }}
+  .allele-table .ref-row .allele-label {{ font-weight: bold; color: #333; background: #f0f0f0; }}
+  .allele-legend {{ margin: 1rem 0; font-size: 13px; display: flex; gap: 1.5rem; flex-wrap: wrap; }}
+  .legend-item {{ display: flex; align-items: center; gap: 4px; }}
+  .swatch {{ display: inline-block; width: 16px; height: 16px; border-radius: 3px; }}
+  .sub-swatch {{ background: #fff3e0; border: 1px solid #e65100; }}
+  .ins-swatch {{ background: #fce4ec; border: 2px solid #ef5350; }}
+  .del-swatch {{ background: #efebe9; border: 1px solid #999; }}
 </style>
 </head>
 <body>
@@ -290,6 +542,8 @@ class ReportGenerator:
   <div class="stat-card"><div class="value">{summary.hdr_reads}</div><div class="label">HDR</div></div>
   <div class="stat-card"><div class="value">{summary.low_confidence_reads}</div><div class="label">Low Confidence</div></div>
 </div>
+
+{allele_table_html}
 
 <h2>Visualizations</h2>
 <div class="plots">

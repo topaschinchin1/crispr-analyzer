@@ -44,6 +44,9 @@ class ReadAnalysis:
     total_substitutions: int = 0
     identity: float = 0.0
     alignment_method: str = ''
+    aligned_query: str = ''
+    aligned_ref: str = ''
+    ref_start: int = 0
 
 
 @dataclass
@@ -74,11 +77,14 @@ class AnalysisEngine:
     """
 
     def __init__(self, nuclease: NucleaseProfile, cut_site: int | None = None,
-                 window_size: int = 50, hdr_template: str | None = None):
+                 window_size: int = 50, hdr_template: str | None = None,
+                 ignore_substitutions: bool = False, edge_mask: int = 0):
         self.nuclease = nuclease
         self.cut_site = cut_site
         self.window_size = window_size
         self.hdr_template = hdr_template
+        self.ignore_substitutions = ignore_substitutions
+        self.edge_mask = edge_mask
 
     def analyze_all(self, alignments: list[AlignmentResult],
                     reference: str) -> tuple[list[ReadAnalysis], SampleSummary]:
@@ -99,7 +105,19 @@ class AnalysisEngine:
 
     def _analyze_single(self, aln: AlignmentResult,
                         reference: str) -> ReadAnalysis:
-        edits = self._extract_edits(aln)
+        all_edits = self._extract_edits(aln)
+
+        # Filter edits based on CRISPResso2-compatible settings
+        ref_len = len(reference)
+        edits = []
+        for edit in all_edits:
+            if self.ignore_substitutions and edit.edit_type == 'substitution':
+                continue
+            if self.edge_mask > 0:
+                if (edit.ref_start < self.edge_mask or
+                        edit.ref_start >= ref_len - self.edge_mask):
+                    continue
+            edits.append(edit)
 
         # Classify the read
         if aln.classification == 'low_confidence':
@@ -130,6 +148,9 @@ class AnalysisEngine:
             total_substitutions=n_sub,
             identity=aln.identity,
             alignment_method=aln.method,
+            aligned_query=aln.aligned_query,
+            aligned_ref=aln.aligned_ref,
+            ref_start=aln.ref_start,
         )
 
     def _extract_edits(self, aln: AlignmentResult) -> list[EditEvent]:

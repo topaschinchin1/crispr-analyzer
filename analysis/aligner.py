@@ -102,8 +102,12 @@ class AdvancedAligner:
         best.raw_quality = quality_scores
 
         # Flag (but never discard) low-quality alignments
+        # Use both score ratio AND identity — for fragment reads (shorter than
+        # reference), score ratio alone is misleadingly low even when the
+        # aligned region matches well.
         max_possible = len(query_seq) * self.params.match_score
-        if max_possible > 0 and best.score / max_possible < self.params.min_score_ratio:
+        score_ratio = best.score / max_possible if max_possible > 0 else 0
+        if score_ratio < self.params.min_score_ratio and best.identity < 0.5:
             best.classification = 'low_confidence'
 
         return best
@@ -166,8 +170,11 @@ class AdvancedAligner:
         aligned_r = traceback.ref
         cigar_str = self._traceback_to_cigar(aligned_q, aligned_r)
 
-        identity = sum(1 for a, b in zip(aligned_q, aligned_r)
-                       if a == b and a != '-') / max(len(query), 1)
+        matches = sum(1 for a, b in zip(aligned_q, aligned_r)
+                      if a == b and a != '-')
+        aligned_len = sum(1 for a, b in zip(aligned_q, aligned_r)
+                          if not (a == '-' and b == '-'))
+        identity = matches / max(aligned_len, 1)
 
         return AlignmentResult(
             query_name=name, query_seq=query, ref_seq=ref,
@@ -207,8 +214,11 @@ class AdvancedAligner:
         # Extract aligned sequences from the Alignment object
         aligned_r, aligned_q = self._extract_aligned_seqs(best, ref, query)
 
-        identity = sum(1 for a, b in zip(aligned_q, aligned_r)
-                       if a == b and a != '-') / max(len(query), 1)
+        matches = sum(1 for a, b in zip(aligned_q, aligned_r)
+                      if a == b and a != '-')
+        aligned_len = sum(1 for a, b in zip(aligned_q, aligned_r)
+                          if not (a == '-' and b == '-'))
+        identity = matches / max(aligned_len, 1)
 
         cigar_str = self._traceback_to_cigar(aligned_q, aligned_r)
 

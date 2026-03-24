@@ -150,6 +150,8 @@ def start_analysis():
         'variant': data.get('variant'),
         'platform': data.get('platform', 'auto'),
         'analysis_mode': data.get('analysis_mode', 'standard'),
+        'ignore_substitutions': bool(data.get('ignore_substitutions', False)),
+        'edge_mask': int(data.get('edge_mask', 0)),
     }
 
     with jobs_lock:
@@ -327,7 +329,9 @@ def _run_analysis(job_id: str, params: dict):
         # ---- 7. Analyze edits ----
         _update(job_id, 82, 'Analyzing edits...')
         engine = AnalysisEngine(
-            nuclease=nuclease, cut_site=cut_site, window_size=50)
+            nuclease=nuclease, cut_site=cut_site, window_size=50,
+            ignore_substitutions=params.get('ignore_substitutions', False),
+            edge_mask=params.get('edge_mask', 0))
         results, summary = engine.analyze_all(alignments, reference)
 
         _update(job_id, 90, f'Editing efficiency: {summary.editing_efficiency:.1f}%')
@@ -338,7 +342,8 @@ def _run_analysis(job_id: str, params: dict):
         os.makedirs(result_dir, exist_ok=True)
 
         reporter = ReportGenerator(result_dir, sample_name='analysis')
-        reporter.generate_all(results, summary, reference, cut_site)
+        reporter.generate_all(results, summary, reference, cut_site,
+                              guide_rna=params.get('guide_rna'))
 
         # Read summary JSON back
         summary_path = os.path.join(result_dir, 'analysis_summary.json')
